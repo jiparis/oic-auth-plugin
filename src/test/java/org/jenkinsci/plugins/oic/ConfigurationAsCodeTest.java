@@ -14,9 +14,7 @@ import java.util.List;
 
 import static io.jenkins.plugins.casc.misc.Util.*;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class ConfigurationAsCodeTest {
     @ClassRule
@@ -45,6 +43,7 @@ public class ConfigurationAsCodeTest {
         assertEquals("scopes", oicSecurityRealm.getScopes());
         assertEquals("http://localhost", oicSecurityRealm.getTokenServerUrl());
         assertEquals("userNameField", oicSecurityRealm.getUserNameField());
+        assertFalse(oicSecurityRealm.getBasicAuth());
     }
 
     @Test

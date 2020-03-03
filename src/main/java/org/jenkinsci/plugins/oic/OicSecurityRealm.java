@@ -115,6 +115,7 @@ public class OicSecurityRealm extends SecurityRealm {
     private final String escapeHatchUsername;
     private final Secret escapeHatchSecret;
     private final String escapeHatchGroup;
+    private final boolean basicAuth;
     private String automanualconfigure;
 
     /** old field that had an '/' implicitly added at the end, 
@@ -130,7 +131,7 @@ public class OicSecurityRealm extends SecurityRealm {
                             String userInfoServerUrl, String userNameField, String tokenFieldToCheckKey, String tokenFieldToCheckValue,
                             String fullNameFieldName, String emailFieldName, String scopes, String groupsFieldName, boolean disableSslVerification,
                             Boolean logoutFromOpenidProvider, String endSessionEndpoint, String postLogoutRedirectUrl, boolean escapeHatchEnabled,
-                            String escapeHatchUsername, String escapeHatchSecret, String escapeHatchGroup, String automanualconfigure) throws IOException {
+                            String escapeHatchUsername, String escapeHatchSecret, String escapeHatchGroup, String automanualconfigure, Boolean basicAuth) throws IOException {
         this.httpTransport = constructHttpTransport(disableSslVerification);
 
         this.clientId = clientId;
@@ -174,6 +175,7 @@ public class OicSecurityRealm extends SecurityRealm {
         this.escapeHatchUsername = Util.fixEmpty(escapeHatchUsername);
         this.escapeHatchSecret = Secret.fromString(escapeHatchSecret);
         this.escapeHatchGroup = Util.fixEmpty(escapeHatchGroup);
+        this.basicAuth = basicAuth;
 
         this.random = new Random();
     }
@@ -238,6 +240,10 @@ public class OicSecurityRealm extends SecurityRealm {
 
     public String getUserNameField() {
         return userNameField;
+    }
+
+    public boolean getBasicAuth() {
+        return basicAuth;
     }
 
     public String getTokenFieldToCheckKey() {
@@ -367,20 +373,23 @@ public class OicSecurityRealm extends SecurityRealm {
     public HttpResponse doCommenceLogin(@QueryParameter String from, @Header("Referer") final String referer) {
         final String redirectOnFinish = determineRedirectTarget(from, referer);
 
+        HttpExecuteInterceptor authInterceptor = basicAuth ? new BasicAuthentication(
+                clientId,
+                clientSecret.getPlainText()
+        ) : new ClientParametersAuthentication(
+          clientId,
+          clientSecret.getPlainText()
+        );
+
         final AuthorizationCodeFlow flow = new AuthorizationCodeFlow.Builder(
                 BearerToken.queryParameterAccessMethod(),
                 httpTransport,
                 JSON_FACTORY,
                 new GenericUrl(tokenServerUrl),
-                new ClientParametersAuthentication(
-                        clientId,
-                        clientSecret.getPlainText()
-                ),
+                authInterceptor,
                 clientId,
                 authorizationServerUrl
-        )
-            .setScopes(Arrays.asList(scopes))
-            .build();
+        ).setScopes(Arrays.asList(scopes)).build();
 
         return new OicSession(flow, from, buildOAuthRedirectUrl()) {
             @Override
